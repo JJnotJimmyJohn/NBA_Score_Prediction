@@ -1,24 +1,24 @@
+import sys
+sys.path.append('.')
 # from cbastats import DBHelper
+from requests.api import head
+import os
+from cbastats.DBHelper import MongoDBHelper
+import pandas as pd
+from pathlib import Path
+from basketball_reference_scraper.seasons import get_schedule, get_standings
+from basketball_reference_scraper.box_scores import get_box_scores
+from basketball_reference_scraper.constants import TEAM_TO_TEAM_ABBR
+from cbastats.Scraper import Scraper
 import logging
 from argparse import ArgumentParser
 from tqdm import tqdm
 from bs4 import BeautifulSoup
 import requests
 import datetime
-import sys
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-sys.path.append('.')
-from cbastats.Scraper import Scraper
-from basketball_reference_scraper.constants import TEAM_TO_TEAM_ABBR
-from basketball_reference_scraper.box_scores import get_box_scores
-from basketball_reference_scraper.seasons import get_schedule, get_standings
-from pathlib import Path
-import pandas as pd
-from cbastats.DBHelper import MongoDBHelper
-import os
-from requests.api import head
 # make sure the packages can be found
 # import other packages
 # import click
@@ -27,6 +27,21 @@ LOGGER_NAME = 'data_refresher'
 
 
 def load_team_enum(file_path):
+    """
+    description
+
+    Parameters
+    ----------
+
+
+    Examples
+    --------
+
+    Returns
+    -------
+
+
+    """
     try:
         with open(file_path, 'r') as f:
             teams = f.readlines()
@@ -42,6 +57,21 @@ def load_team_enum(file_path):
 
 
 def set_logging_config(verbose):
+    """
+    description
+
+    Parameters
+    ----------
+
+
+    Examples
+    --------
+
+    Returns
+    -------
+
+
+    """
     # get logger
     logger = logging.getLogger(LOGGER_NAME)
 
@@ -68,6 +98,21 @@ def set_logging_config(verbose):
 
 
 def get_current_season():
+    """
+    description
+
+    Parameters
+    ----------
+
+
+    Examples
+    --------
+
+    Returns
+    -------
+
+
+    """
     ENCODING = 'UTF-8'
     PARSER = 'html.parser'
     HEADERS = {
@@ -86,6 +131,21 @@ def get_current_season():
 
 
 def scrape_schedule(*args):
+    """
+    description
+
+    Parameters
+    ----------
+
+
+    Examples
+    --------
+
+    Returns
+    -------
+
+
+    """
     logger = logging.getLogger(LOGGER_NAME)
     logger.info('Getting current season')
     all_schedules = []
@@ -111,6 +171,21 @@ def scrape_schedule(*args):
 
 
 def abbr_team_name(all_schedules):
+    """
+    description
+
+    Parameters
+    ----------
+
+
+    Examples
+    --------
+
+    Returns
+    -------
+
+
+    """
     logger = logging.getLogger(LOGGER_NAME)
     logger.info('Converting long team names into abbrs')
     all_schedules.dropna(how='any', inplace=True)
@@ -139,6 +214,21 @@ def abbr_team_name(all_schedules):
 
 
 def gen_aux_info(all_schedules):
+    """
+    description
+
+    Parameters
+    ----------
+
+
+    Examples
+    --------
+
+    Returns
+    -------
+
+
+    """
     logger = logging.getLogger(LOGGER_NAME)
     # generate game_id and URLs
     logger.info(f"Generating {len(all_schedules)} games' game_id and URL")
@@ -159,6 +249,21 @@ def gen_aux_info(all_schedules):
 
 
 def process_schedule(all_schedules):
+    """
+    description
+
+    Parameters
+    ----------
+
+
+    Examples
+    --------
+
+    Returns
+    -------
+
+
+    """
     logger = logging.getLogger(LOGGER_NAME)
     logger.info("Start processing schedule")
     all_schedules = abbr_team_name(all_schedules)
@@ -166,7 +271,23 @@ def process_schedule(all_schedules):
     logger.info("Schedule processed!")
     return processed_schedule
 
-def get_four_factors(url,game_id,session=None):
+
+def get_four_factors(url, game_id,session=None):
+    """
+    description
+
+    Parameters
+    ----------
+
+
+    Examples
+    --------
+
+    Returns
+    -------
+
+
+    """
     session = session or requests.Session()
     response = session.get(url, timeout=5)
     html = response.content
@@ -174,18 +295,30 @@ def get_four_factors(url,game_id,session=None):
     stat_html = html.replace('<!--', "")
     stat_html = stat_html.replace('-->', "")
     soup = BeautifulSoup(stat_html, 'html.parser')
-    table = pd.read_html(str(soup.find_all('table',attrs={"id":"four_factors"})[0]))[0]
-    table = table.droplevel(0,axis=1)
-    table = table.rename({'Unnamed: 0_level_1':'Team'},axis=1)
+    table = pd.read_html(
+        str(soup.find_all('table', attrs={"id": "four_factors"})[0]))[0]
+    table = table.droplevel(0, axis=1)
+    table = table.rename({'Unnamed: 0_level_1': 'Team'}, axis=1)
     table['game_id'] = game_id
     return table.to_dict('records')
 
-def requests_retry_session(
-    retries=5,
-    backoff_factor=0.3,
-    status_forcelist=(500, 502, 504),
-    session=None,
-):
+
+def requests_retry_session(retries=5,backoff_factor=0.3,status_forcelist=(500, 502, 504),session=None):
+    """
+    description
+
+    Parameters
+    ----------
+
+
+    Examples
+    --------
+
+    Returns
+    -------
+
+
+    """
     session = session or requests.Session()
     retry = Retry(
         total=retries,
@@ -199,8 +332,38 @@ def requests_retry_session(
     session.mount('https://', adapter)
     return session
 
+def get_updating_tasks(collection,field_to_update:str,fields:dict=None)->list:
+    """
+    Get the documents that needs update, defined by `field_to_update`. 
+    Document with empty field, or doesn't contain the filed will be acquired.
+    Limit the fields returned by using `fields`
+
+    Parameters
+    ----------
+    collection : pymongo collection
+    field_to_update : a string indicating which field to check
+    fields: a dictionary to indicate which fields to pull from mongodb 
+
+    Examples
+    --------
+
+    Returns
+    -------
+    list of documents from Mongodb
+
+    """
+    for x in tqdm(fields):
+        pass
+    logger = logging.getLogger(LOGGER_NAME)
+    logger.info(f"Getting tasks: {field_to_update}")
+    tasks = list(collection.find(filter={"$or": [{field_to_update: {"$exists": False}}, {field_to_update: None}]}, projection=fields))
+    logger.info(f"{len(tasks)} tasks: {field_to_update}")
+    return list(tasks)
+
+
 def refresh():
     #####################################################################################
+    # configurations
     # parameters
 
     # take in raw arguments
@@ -259,6 +422,7 @@ def refresh():
 
     # config['TEAM_ENUM'] = load_team_enum(config['TEAM_ENUM_FILEPATH'])
     logger.debug(config)
+    # configurations
     #####################################################################################
     # workflow starts
     logger.info("Work flow starts")
@@ -278,51 +442,98 @@ def refresh():
 
     # load into Staging db
     # connect to nbaStats db, production, staging collections
-    logger.info(f"Connecting to {config['MONGODB_ENDPOINT']} as {config['MONGODB_USERNAME']}")
+    logger.info(
+        f"Connecting to {config['MONGODB_ENDPOINT']} as {config['MONGODB_USERNAME']}")
     mongodbio = MongoDBHelper()
     client = mongodbio.create_connection(
         config['MONGODB_USERNAME'], config['MONGODB_PWD'], config['MONGODB_ENDPOINT'])
     nba_db = client['nbaStats']
     coll_nbaGames = nba_db['nbaGames']
-    coll_nbaGamesStaging= nba_db['nbaGamesStaging']
+    coll_nbaGamesStaging = nba_db['nbaGamesStaging']
     # TODO: add logger into DBHelper
-    logger.info('Inserting new schedule records')
-    mongodbio.insert_new_games(all_schedules.to_dict('records'),coll_nbaGames,coll_nbaGamesStaging,id_col_name='game_id')
+    logger.info('Start inserting new schedule records')
+    mongodbio.insert_new_games(all_schedules.to_dict(
+        'records'), coll_nbaGames, coll_nbaGamesStaging, id_col_name='game_id')
 
     # update score - Don't need it for BBR schedule
-    # if there is a change to the score, everything in that document will be reset
-    # results=[]
-    # for game in scraped_schedule:
-    #     game.pop('_id',None)
     #     result=coll_cbaGames.find_one_and_update(
     #         filter={"$and":[{'GameID_Sina':game['GameID_Sina']},
     #                         {'比分':{"$ne":game['比分']}}
     #                         ]},
     #         update={'$set': game})
-    #     if result:
-    #         results.append(result)
-    
+
     # scrape four factors
     # TODO: use multithread
-    logger.info('Pulling list of games that needs four factors updated')
-    # TODO: exists is False or is null
-    ff_tasks=mongodbio.select_records(coll_nbaGames,filter={'four_factors':{"$exists":False}},field={'boxscores_url':1,'game_id':1})
-    logger.info(f"{len(ff_tasks)} games don't have four factors")
-    # TODO: set headers etc. for session
-    # TODO: repeat updating process until nothing left to do
+
     session = requests_retry_session()
+    ff_tasks = get_updating_tasks(collection=coll_nbaGames,field_to_update='four_factors',fields={'boxscores_url':1,'game_id':1})
+    # TODO: may need to set headers etc. for session
+    # TODO: repeat updating process until nothing left to do
+    # TODO: clean up code
+    failure_counter = 0
+    success_counter = 0
     for task in tqdm(ff_tasks):
-        four_factors = get_four_factors(task['boxscores_url'],task['game_id'],session)
-        coll_nbaGames.find_one_and_update(filter={"_id":task['_id']},update={'$set':{'four_factors':four_factors}})
-
-
-
-
-
-    # coll_nbaGames.find_one(filter={ 'four_factos':{ "$exists":False } })
-    # get these 4 factors and update the records
+        try:
+            logger.debug(
+                f"Scraping four factors: {task['boxscores_url']},{task['game_id']}")
+            four_factors = get_four_factors(
+                task['boxscores_url'], task['game_id'], session)
+            coll_nbaGames.find_one_and_update(filter={"_id": task['_id']}, update={
+                                              '$set': {'four_factors': four_factors}})
+            success_counter += 1
+        except Exception as err:
+            failure_counter += 1
+            logger.debug(
+                f"Error encountered: {task['boxscores_url']},{task['game_id']}")
+            logger.warning(
+                f"Error encountered in getting four factors. Error: {repr(err)}")
+            if failure_counter > 10:
+                logger.warning(
+                    'Too many failures encountered. Skipping this step.')
+                break
+    logger.info(
+        f"{success_counter} four factors updated,{failure_counter} failures encountered.")
 
     # scrape box scores
+    logger.info('Pulling list of games that needs box scores')
+    # bs_tasks = get_updating_tasks(collection=coll_nbaGames,field_to_update='four_factors')
+
+    bs_tasks = mongodbio.select_records(coll_nbaGames, filter={"$or": [{'basic_boxscores': {
+                                        "$exists": False}}, {'basic_boxscores': None}]}, field={'four_factors': 0, 'boxscores_url': 0,'VISITOR_PTS':0,'HOME_PTS':0})
+    logger.info(f"{len(bs_tasks)} games don't have box scores")
+    failure_counter = 0
+    success_counter = 0
+    for task in tqdm(bs_tasks):
+        try:
+            logger.debug(
+                f"Scraping box scores: {task['game_id']}")
+            basic_boxscores = get_box_scores(
+                task['DATE'], task['HOME'], task['VISITOR'], period='GAME', stat_type='BASIC',session=session)
+            basic_boxscores[task['HOME']] = basic_boxscores[task['HOME']].to_dict("records")
+            basic_boxscores[task['VISITOR']] = basic_boxscores[task['VISITOR']].to_dict("records")
+            coll_nbaGames.find_one_and_update(filter={"_id": task['_id']}, update={
+                                              '$set': {'basic_boxscores': basic_boxscores}})
+            advanced_boxscores = get_box_scores(
+                task['DATE'], task['HOME'], task['VISITOR'], period='GAME', stat_type='ADVANCED',session=session)
+            advanced_boxscores[task['HOME']] = advanced_boxscores[task['HOME']].to_dict("records")
+            advanced_boxscores[task['VISITOR']] = advanced_boxscores[task['VISITOR']].to_dict("records")
+            coll_nbaGames.find_one_and_update(filter={"_id": task['_id']}, update={
+                                              '$set': {'advanced_boxscores': advanced_boxscores}})
+            success_counter += 1
+        except Exception as err:
+            failure_counter += 1
+            logger.debug(
+                f"Error encountered: {task['game_id']}")
+            logger.warning(
+                f"Error encountered in getting four factors. Error: {repr(err)}")
+            if failure_counter > 10:
+                logger.warning(
+                    'Too many failures encountered. Skipping this step.')
+                raise err
+    logger.info(
+        f"{success_counter} box scores updated,{failure_counter} failures encountered.")
+
+    # after basic data are scraped, start constructing training data (in another script)
 
 
 if __name__ == '__main__':
