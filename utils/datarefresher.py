@@ -24,7 +24,7 @@ from requests.packages.urllib3.util.retry import Retry
 # import click
 
 LOGGER_NAME = 'data_refresher'
-
+# test git
 
 def load_team_enum(file_path):
     """
