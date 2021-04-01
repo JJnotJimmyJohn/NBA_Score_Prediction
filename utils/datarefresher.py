@@ -400,6 +400,7 @@ def refresh():
     config['START_SEASON'] = raw_args.start_season
 
     # load these environment variables for DB access
+    # TODO: use dotenv
     logger.info('Checking DB access environment variables')
     needed_envs = ['MONGODB_PWD', 'MONGODB_USERNAME', 'MONGODB_ENDPOINT']
     envs = os.environ
