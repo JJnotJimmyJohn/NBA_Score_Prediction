@@ -56,7 +56,7 @@ def load_team_enum(file_path):
     return team_dict
 
 
-def set_logging_config(verbose):
+def set_logging_config(logger_name,verbose):
     """
     description
 
@@ -385,7 +385,7 @@ def refresh():
     raw_args = parser.parse_args()
 
     # set logging level
-    logger = set_logging_config(raw_args.verbose)
+    logger = set_logging_config(LOGGER_NAME,raw_args.verbose)
     logger.info(F"Running '{__file__}'")
 
     # process raw arguments

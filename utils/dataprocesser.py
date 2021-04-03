@@ -11,7 +11,7 @@ import pandas as pd
 from cbastats.DBHelper import MongoDBHelper
 import os
 from dotenv import load_dotenv
-from utils.datarefresher import get_current_season
+from utils.datarefresher import get_current_season, set_logging_config
 
 
 # In[2]:
@@ -65,7 +65,7 @@ load_dotenv(dotenv_path=env_path,verbose=True)
 # In[6]:
 
 
-needed_envs = ['MONGODB_PWD', 'MONGODB_USERNAME', 'MONGODB_ENDPOINT']
+needed_envs = ['MONGODB_PWD', 'MONGODB_USERNAME', 'MONGODB_ENDPOINT','LOGGER_NAME']
 envs = os.environ
 # only checks if user wants to save data to DB
 # check if all needed environment variables are present
@@ -74,11 +74,16 @@ for needed_env in needed_envs:
     if needed_env not in envs:
         raise Exception(f"Missing environment variable: {needed_env}.\n     Please check if these environment variables are present: {needed_envs}")
     config[needed_env] = envs[needed_env]
+    
+# In[]:
+logger = set_logging_config(config['LOGGER_NAME'],False)
 
+
+# %%
 
 # In[7]:
 
-
+logger.info("Connecting to MongoDB")
 mongodbio = MongoDBHelper()
 client = mongodbio.create_connection(
     config['MONGODB_USERNAME'], config['MONGODB_PWD'], config['MONGODB_ENDPOINT'])
@@ -87,25 +92,25 @@ coll_nbaGames = nba_db['nbaGames']
 coll_nbaGamesStaging= nba_db['nbaGamesStaging']
 
 
-# # Data Cleaning Test
-
 # ## Assemble Raw Data
 
 # In[8]:
 
 
+logger.info("Selecting schedules")
 # schedule
 schedule = mongodbio.select_records(coll_nbaGames,field={
     'four_factors':0, 'basic_boxscores':0,'advanced_boxscores':0,'_id':0
 })
 schedule=pd.DataFrame(schedule)
-print(schedule.shape)
+# print(schedule.shape)
 schedule.head()
 
 
 # In[9]:
 
 
+logger.info("Selecting four factors")
 # four factors
 fourfactors=mongodbio.select_records(coll_nbaGames,field={'four_factors':1,'_id':0
 })
@@ -116,13 +121,14 @@ for ff in fourfactors:
     fourfactors_dfs.append(_)
 fourfactors = pd.concat(fourfactors_dfs)
 fourfactors = fourfactors.reset_index(drop=True)
-print(fourfactors.shape)
+# print(fourfactors.shape)
 fourfactors.head()
 
 
 # In[10]:
 
 
+logger.info("Selecting box scores")
 # box scores
 adv_box_scores = mongodbio.select_records(coll_nbaGames,field={
     'game_id':1,'advanced_boxscores':1,'_id':0
@@ -144,7 +150,7 @@ adv_box_scores=pd.concat(team_adv_box_scores_dfs,axis=1).transpose().reset_index
 # delete duplicated columns and empty, useless columns
 rm_cols = config['DUP_COL']
 adv_box_scores = adv_box_scores.drop(columns=rm_cols)
-print(adv_box_scores.shape)
+# print(adv_box_scores.shape)
 adv_box_scores.head()
 
 
@@ -153,6 +159,7 @@ adv_box_scores.head()
 # In[11]:
 
 
+logger.info("Join data together")
 # join with four factors
 _ = pd.merge(schedule,fourfactors,left_on=['game_id','HOME'],right_on=['game_id','Team'])
 _ = pd.merge(_,fourfactors,left_on=['game_id','VISITOR'],right_on=['game_id','Team'],suffixes=('_home','_visitor'))
@@ -160,21 +167,6 @@ _ = pd.merge(_,fourfactors,left_on=['game_id','VISITOR'],right_on=['game_id','Te
 _ = pd.merge(_,adv_box_scores,left_on=['game_id','Team_home'],right_on=['game_id','Team'])
 complete_data = pd.merge(_,adv_box_scores,left_on=['game_id','Team_visitor'],right_on=['game_id','Team'],suffixes=('_home','_visitor'))
 complete_data = complete_data.drop(columns=['Team_home','Team_visitor'])
-
-
-# In[12]:
-
-
-complete_data
-
-
-# In[13]:
-
-
-complete_data.info()
-
-
-# # Convert Data Types
 
 # In[14]:
 
@@ -212,10 +204,11 @@ complete_data = complete_data[config['COLUMN_NAMES']]
 
 # In[20]:
 
-
+logger.info("Inserting records to MongoDB")
 coll_nbaGameBoxScores = nba_db['nbaProcessedBoxScores']
 
 coll_nbaGameBoxScores.delete_many(filter={})
 
 coll_nbaGameBoxScores.insert_many(complete_data.to_dict('records'))
 
+logger.info("Script complete")

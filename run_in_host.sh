@@ -1,0 +1,1 @@
+docker exec 8f5d2093f3ce bash /Documents/NBA_Score_Prediction/run_in_docker.sh
