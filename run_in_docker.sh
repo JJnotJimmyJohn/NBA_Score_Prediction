@@ -8,6 +8,7 @@
     # $ sudo dpkg-reconfigure --frontend noninteractive tzdata
 cd "${0%/*}"
 python /home/NBA_Score_Prediction/utils/datarefresher.py
+python /home/NBA_Score_Prediction/utils/dataprocesser.py
 ################# below is the daily script ###################
 # echo "Start Time: $(date)" >> ./crontab_log.txt
 
