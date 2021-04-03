@@ -352,8 +352,8 @@ def get_updating_tasks(collection,field_to_update:str,fields:dict=None)->list:
     list of documents from Mongodb
 
     """
-    for x in tqdm(fields):
-        pass
+    # for x in tqdm(fields):
+    #     pass
     logger = logging.getLogger(LOGGER_NAME)
     logger.info(f"Getting tasks: {field_to_update}")
     tasks = list(collection.find(filter={"$or": [{field_to_update: {"$exists": False}}, {field_to_update: None}]}, projection=fields))
@@ -500,7 +500,8 @@ def refresh():
     # bs_tasks = get_updating_tasks(collection=coll_nbaGames,field_to_update='four_factors')
 
     bs_tasks = mongodbio.select_records(coll_nbaGames, filter={"$or": [{'basic_boxscores': {
-                                        "$exists": False}}, {'basic_boxscores': None}]}, field={'four_factors': 0, 'boxscores_url': 0,'VISITOR_PTS':0,'HOME_PTS':0})
+                                        "$exists": False}}, {'basic_boxscores': None},
+                                        {'advanced_boxscores': {"$exists": False}}, {'advanced_boxscores': None}]}, field={'four_factors': 0, 'boxscores_url': 0,'VISITOR_PTS':0,'HOME_PTS':0})
     logger.info(f"{len(bs_tasks)} games don't have box scores")
     failure_counter = 0
     success_counter = 0
@@ -526,7 +527,7 @@ def refresh():
             logger.debug(
                 f"Error encountered: {task['game_id']}")
             logger.warning(
-                f"Error encountered in getting four factors. Error: {repr(err)}")
+                f"Error encountered in getting box scores. Error: {repr(err)}")
             if failure_counter > 10:
                 logger.warning(
                     'Too many failures encountered. Skipping this step.')
