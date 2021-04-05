@@ -10,6 +10,7 @@
 cd "${0%/*}" # cd into directory of this bash script
 python ./utils/datarefresher.py
 python ./utils/dataprocesser.py
+python ./utils/featuregenerator.py
 ################# below is the daily script ###################
 # echo "Start Time: $(date)" >> ./crontab_log.txt
 
