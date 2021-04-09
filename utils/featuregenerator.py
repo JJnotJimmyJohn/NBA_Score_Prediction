@@ -112,9 +112,9 @@ def gen_team_feat_PastNGames_Avg(N_GAMES=10):
     col_summ_home = [col for col in list(boxscores.columns) if col.endswith('_home')]
     hteam_games=boxscores[['DATE','HOME','game_id','season']]
     # shift one row down, so that calculating past stats won't cause data leakage
-    hteams_boxscores=boxscores.groupby(['season','HOME']).shift(1).dropna(how='any')[['game_id']+col_summ_home]
+    hteams_boxscores=boxscores.groupby(['season','HOME']).shift(1).dropna(how='any')[col_summ_home]
     # shift games downward by 1 row, so when calculating rolling 10 games, game to predict is not included
-    shifted=pd.merge(hteam_games,hteams_boxscores,on='game_id')
+    shifted=pd.merge(hteam_games,hteams_boxscores,left_index=True,right_index=True)
     home_summarized = shifted.rename_axis(index='game_index').sort_values(by='DATE').groupby(['season','HOME']).rolling(N_GAMES).mean().dropna(how='any')[col_summ_home].droplevel(level=[0,1])
 
     logger.info(f"Summarize visitor team data")
@@ -122,9 +122,9 @@ def gen_team_feat_PastNGames_Avg(N_GAMES=10):
     col_summ_visitor = [col for col in list(boxscores.columns) if col.endswith('_visitor')]
     vteam_games=boxscores[['DATE','VISITOR','game_id','season']]
     # shift one row down, so that calculating past stats won't cause data leakage
-    vteams_boxscores=boxscores.groupby(['season','VISITOR']).shift(1).dropna(how='any')[['game_id']+col_summ_visitor]
+    vteams_boxscores=boxscores.groupby(['season','VISITOR']).shift(1).dropna(how='any')[col_summ_visitor]
     # shift games downward by 1 row, so when calculating rolling 10 games, game to predict is not included
-    shifted=pd.merge(vteam_games,vteams_boxscores,on='game_id')
+    shifted=pd.merge(vteam_games,vteams_boxscores,left_index=True,right_index=True)
     visitor_summarized = shifted.rename_axis(index='game_index').sort_values(by='DATE').groupby(['season','VISITOR']).rolling(N_GAMES).mean().dropna(how='any')[col_summ_visitor].droplevel(level=[0,1])
 
     logger.info(f"Join home team, visitor team data")
