@@ -128,7 +128,7 @@ def gen_team_feat_PastNGames_Avg(N_GAMES=10):
     visitor_summarized = shifted.rename_axis(index='game_index').sort_values(by='DATE').groupby(['season','VISITOR']).rolling(N_GAMES).mean().dropna(how='any')[col_summ_visitor].droplevel(level=[0,1])
 
     logger.info(f"Join home team, visitor team data")
-    processed_dataset=pd.concat([boxscores.rename_axis('game_index')[['DATE','VISITOR', 'VISITOR_PTS', 'HOME', 'HOME_PTS', 'boxscores_url','game_id']],
+    processed_dataset=pd.concat([boxscores.rename_axis('game_index')[['season','DATE','VISITOR', 'VISITOR_PTS', 'HOME', 'HOME_PTS', 'boxscores_url','game_id']],
               home_summarized,
               visitor_summarized],join='inner',axis=1)
     processed_dataset['TOTAL_PTS'] = processed_dataset['VISITOR_PTS']+processed_dataset['HOME_PTS']
@@ -136,7 +136,7 @@ def gen_team_feat_PastNGames_Avg(N_GAMES=10):
     processed_dataset['HOME_WIN'] = (processed_dataset['HOME_VISITOR_PTS_DIFF']>0)*1
     
     logger.info(f"Insert data into MongoDB")
-    coll_feat = nba_db['nbaTeamFeat_PastNGames_Avg']
+    coll_feat = nba_db['nbaTeamFeat_Past10Games_Avg']
     coll_feat.delete_many(filter={})
     coll_feat.insert_many(processed_dataset.to_dict('records'))
     logger.info(f"Data insertion complete")
